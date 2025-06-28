@@ -24,6 +24,6 @@ async function bootstrap() {
   );
 
   await app.listen();
-  logger.log(`Application is running on: http://localhost:${envs.port}`);
+  logger.log(`Products-Ms running on: http://localhost:${envs.port}`);
 }
 void bootstrap();
