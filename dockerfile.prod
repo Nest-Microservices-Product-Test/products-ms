@@ -1,0 +1,43 @@
+# Dependencies Stage
+FROM node:20.18.0-alpine AS deps
+
+WORKDIR /usr/src/app
+
+COPY package.json ./
+COPY package-lock.json ./
+
+RUN npm install -g @nestjs/cli
+RUN npm install
+
+# Builder & Validator Stage
+
+FROM node:20.18.0-alpine AS build
+
+WORKDIR /usr/src/app 
+
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+COPY . .
+COPY prisma ./prisma
+
+RUN npx prisma generate
+# RUN npm run test -- At this point tests can be ran to stop building if fails
+RUN npm run build
+RUN npm ci -f --only=production && npm cache clean --force
+
+
+# Production Stage
+
+FROM node:20.18.0-alpine AS prod
+
+WORKDIR /usr/src/app 
+
+COPY --from=build /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/dist ./dist
+COPY --from=build /usr/src/app/prisma ./prisma
+COPY --from=build /usr/src/app/generated ./generated
+
+ENV NODE_ENV=production
+USER node
+EXPOSE 3001
+
+CMD ["node", "dist/main.js"]
